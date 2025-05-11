@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Motor Vehicle Liability Determination Tool</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+
+  :root {
+    --bg-color: #1e1e2f;
+    --user-msg-bg: #4a90e2;
+    --bot-msg-bg: #2f2f45;
+    --text-color: #e0e0e0;
+    --btn-bg: #4a90e2;
+    --btn-hover-bg: #357ABD;
+    --mic-active-color: #e74c3c;
+    --form-bg: #3a3a56;
+    --form-label: #a0a0c0;
+    --form-input-bg: #2f2f45;
+    --form-input-color: #ddd;
+    --input-border-color: #5a5a7a;
+    --highlight-color: #e7b43c;
+    --danger-color: #e74c3c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; background: var(--bg-color); font-family: 'Montserrat', sans-serif;
+    color: var(--text-color); display: flex; justify-content: center;
+    align-items: flex-start; min-height: 100vh; padding: 10px;
+  }
+
+  #app-container {
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; max-width: 900px; transition: filter 0.3s ease;
+  }
+  #app-container[aria-hidden="true"] {
+    filter: blur(3px); pointer-events: none; user-select: none;
+  }
+
+  #chat-form-wrapper {
+    display: flex;
+    width: 100%;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start; 
+  }
+
+  #chat-container {
+    flex-grow: 1;        
+    flex-shrink: 1;      
+    flex-basis: 300px;   
+    min-width: 280px;    
+    max-width: 400px;    
+    height: 600px;       
+    background: #28293d;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 15px rgba(74, 144, 226, 0.7);
+    overflow: hidden;
+  }
+
+  #form-container {
+    flex-grow: 1.2;     
+    flex-shrink: 1;      
+    flex-basis: 320px;   
+    min-width: 300px;    
+    max-width: 480px;    
+    height: 600px;       
+    overflow-y: auto;
+    background: var(--form-bg);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--text-color);
+    box-shadow: 0 0 15px rgba(74, 144, 226, 0.7);
+    position: relative;
+  }
+
+  #chat-header {
+    padding: 10px 15px; font-weight: 600; font-size: 1.2rem; 
+    letter-spacing: 0.05em; color: var(--btn-bg);
+    border-bottom: 1px solid #444560; user-select: none;
+    text-align: center; position: relative;
+    display: flex; flex-direction: column; align-items: center; 
+    flex-shrink: 0; /* Prevent header from shrinking */
+  }
+  #chat-title { margin-bottom: 3px; }
+  #progress-indicator { font-size: 0.8rem; color: var(--form-label); margin-top: 2px; font-weight: 400; }
+  #clear-restart-btn {
+    font-size: 0.7rem; padding: 3px 8px; margin-top: 5px;
+    background-color: var(--danger-color); color: white; border: none;
+    border-radius: 10px; cursor: pointer;
+  }
+  #clear-restart-btn:hover { background-color: #c0392b; }
+
+
+  #chat-messages {
+    flex-grow: 1; padding: 15px; overflow-y: auto; scroll-behavior: smooth;
+    display: flex; flex-direction: column;
+  }
+
+  .message {
+    max-width: 85%; padding: 10px 14px; margin-bottom: 10px;
+    border-radius: 18px; line-height: 1.4; font-size: 1rem;
+    word-wrap: break-word; user-select: text;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 0.15);
+  }
+  .user-message { background: var(--user-msg-bg); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+  .bot-message { background: var(--bot-msg-bg); color: #c0c0f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+  #input-area {
+    display: flex;
+    padding: 10px 12px;
+    border-top: 1px solid #444560;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0; 
+  }
+  #user-input {
+    flex-grow: 1; padding: 10px 15px; border-radius: 22px;
+    border: 1px solid var(--input-border-color); background: var(--form-input-bg);
+    color: var(--form-input-color); font-family: 'Montserrat', sans-serif;
+    font-size: 1rem; outline: none; transition: border-color 0.2s ease; display: block;
+    min-width: 0; /* ADDED: Allows the input to shrink smaller if needed */
+  }
+  #user-input:focus { border-color: var(--btn-bg); }
+
+  .action-button {
+    padding: 9px 15px; 
+    background: var(--btn-bg); color: white; border: none; border-radius: 20px;
+    font-weight: 600; cursor: pointer; transition: background-color 0.25s ease, opacity 0.25s ease;
+    font-size: 0.85rem; 
+    white-space: nowrap; 
+  }
+  .action-button:disabled { opacity: 0.6; pointer-events: none; }
+  .action-button:enabled:hover { background-color: var(--btn-hover-bg); }
+  .action-button:enabled:active { background-color: var(--btn-hover-bg); }
+
+  #send-btn { display: inline-block; }
+  #prev-btn, #skip-btn {
+    background-color: #6c757d; display: none; 
+  }
+  #prev-btn:enabled:hover, #skip-btn:enabled:hover { background-color: #5a6268; }
+
+  #submit-report-btn {
+    width: 100%; margin-top: 15px; padding: 12px; font-size: 1.1rem; display: none;
+  }
+
+  #mic-btn {
+    width: 42px; height: 42px; 
+    background: var(--btn-bg); border-radius: 50%;
+    transition: background-color 0.25s ease; cursor: pointer; border: none;
+    display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+  }
+  #mic-btn[aria-pressed="true"] { background: var(--mic-active-color); box-shadow: 0 0 8px var(--mic-active-color); }
+  #mic-btn svg { fill: white; width: 20px; height: 20px; } 
+  #mic-btn:active:not([aria-pressed="true"]) { background-color: var(--btn-hover-bg); }
+
+  #chat-messages::-webkit-scrollbar { width: 6px; }
+  #chat-messages::-webkit-scrollbar-thumb { background: #55557a; border-radius: 3px; }
+  #chat-messages::-webkit-scrollbar-track { background: transparent; }
+
+  #form-container h2 {
+    margin-top: 0; color: var(--btn-bg); font-weight: 700;
+    text-align: center; margin-bottom: 20px; user-select: none;
+  }
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-weight: 600; color: var(--form-label); margin-bottom: 6px; user-select: none; transition: color 0.2s ease; }
+  .form-input {
+    width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--input-border-color);
+    background: var(--form-input-bg); color: var(--form-input-color); font-family: 'Montserrat', sans-serif;
+    font-size: 1rem; outline: none; transition: border-color 0.2s ease;
+  }
+  .form-input:focus { border-color: var(--btn-bg); }
+  .form-input:read-only { cursor: default; }
+  .form-input:read-only::placeholder { color: transparent; }
+  .form-input.answered { font-weight: 500; }
+  .form-group.active .form-label { color: var(--highlight-color); }
+  .form-group.active .form-input { border-color: var(--highlight-color); box-shadow: 0 0 5px var(--highlight-color); }
+
+  #summary-modal {
+    position: fixed; inset: 0; background-color: rgba(30,30,47,0.95); display: flex;
+    justify-content: center; align-items: center; visibility: hidden; opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1000; padding: 15px;
+  }
+  #summary-modal.active { visibility: visible; opacity: 1; }
+  #summary-content {
+    background: #2f2f45; padding: 25px; border-radius: 12px; max-height: 90vh;
+    overflow-y: auto; width: 100%; max-width: 500px; 
+    color: #ccc; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+  #summary-content::-webkit-scrollbar { width: 6px; }
+  #summary-content::-webkit-scrollbar-thumb { background: #55557a; border-radius: 3px; }
+  #summary-content::-webkit-scrollbar-track { background: transparent; }
+  #summary-content h2 { margin-top: 0; color: var(--btn-bg); font-size: 1.5rem; text-align: center; margin-bottom: 15px; }
+  #summary-content dl { margin: 0; }
+  #summary-content dt { font-weight: 600; margin-top: 14px; color: #a0a0c0; }
+  #summary-content dd { margin-left: 0; margin-bottom: 10px; color: #eee; word-wrap: break-word; padding-left: 10px; border-left: 2px solid var(--btn-bg); }
+  #summary-determination { margin-top: 20px; padding-top: 15px; border-top: 1px solid #444560; }
+  #summary-determination h3 { color: var(--highlight-color); margin-top: 0; text-align: center; }
+  #summary-determination p { margin-bottom: 5px; }
+  #summary-determination ul { padding-left: 20px; margin-top: 5px; }
+  #summary-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: space-between; }
+  #export-summary-btn, #close-summary-btn {
+    flex-grow: 1; padding: 12px 0; font-weight: 600; cursor: pointer;
+    border-radius: 24px; background: var(--btn-bg); border: none;
+    color: white; font-size: 1rem; transition: background-color 0.25s ease;
+  }
+  #export-summary-btn { background-color: #6c757d; }
+  #export-summary-btn:hover { background-color: #5a6268; }
+  #close-summary-btn:active { background: var(--btn-hover-bg); }
+
+
+  @media (max-width: 800px) {
+    body {
+      align-items: stretch; 
+      padding: 0;
+    }
+    #app-container { padding: 0; }
+    #chat-form-wrapper {
+      flex-direction: column; 
+      align-items: center;
+      gap: 15px; 
+    }
+    #chat-container, #form-container {
+      max-width: 100%;
+      width: 100%; 
+      height: 50vh; 
+      min-width: unset; 
+      border-radius: 0;
+      box-shadow: none;
+      flex-shrink: 0; 
+      flex-basis: auto; /* Reset basis for column layout */
+    }
+    #form-container { 
+        /* height: 50vh; */ /* Already set above */
+        padding: 15px; 
+    }
+    #chat-header { font-size: 1.1rem; padding: 8px 10px; }
+    #clear-restart-btn { font-size: 0.65rem; padding: 2px 6px; }
+    #progress-indicator { font-size: 0.7rem; }
+    #form-container h2 { padding: 15px 10px; font-size: 1.2rem; margin-bottom: 15px; }
+    #input-area { 
+        padding: 8px; 
+        gap: 5px; 
+        flex-shrink: 0; 
+    }
+    #user-input { padding: 8px 12px; font-size: 0.9rem; } /* min-width: 0; will also apply here */
+    .action-button { padding: 8px 10px; font-size: 0.75rem; }
+    #mic-btn { width: 38px; height: 38px; }
+    #mic-btn svg { width: 18px; height: 18px; }
+    #summary-content { max-width: 95%; }
+    #summary-buttons { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+  <div id="app-container" aria-hidden="false">
+    <div id="chat-form-wrapper">
+      <div id="chat-container" role="main" aria-label="Motor Vehicle Liability Determination Tool interface">
+        <header id="chat-header">
+          <span id="chat-title">Motor Vehicle Liability Determination</span>
+          <div id="progress-indicator"></div>
+          <button id="clear-restart-btn" title="Clear saved data and restart questionnaire">Clear Data & Restart</button>
+        </header>
+        <section id="chat-messages" aria-live="polite" aria-atomic="true"></section>
+        <form id="input-area" aria-label="Text or Voice input form">
+          <button type="button" id="prev-btn" class="action-button" aria-label="Previous question" title="Previous question">Prev</button>
+          <button type="button" id="skip-btn" class="action-button" aria-label="Skip question" title="Skip this question">Skip</button>
+          <input
+            id="user-input"
+            type="text"
+            autocomplete="off"
+            aria-required="true"
+            aria-label="Answer input field"
+            placeholder="Type your answer here..."
+          />
+          <button type="submit" id="send-btn" class="action-button" aria-label="Send answer" disabled>Send</button>
+          <button type="button" id="mic-btn" aria-label="Start voice input" aria-pressed="false" title="Start voice input">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"></path>
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <div id="form-container" aria-label="Accident report form">
+        <h2>Accident Report Form</h2>
+        <form id="report-form" autocomplete="off" novalidate>
+          <!-- Dynamic form fields inserted by JS -->
+        </form>
+        <button type="button" id="submit-report-btn" class="action-button">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summary-modal" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabindex="-1">
+    <div id="summary-content">
+      <h2 id="summary-title">Accident Report Summary</h2>
+      <dl id="summary-list"></dl>
+      <div id="summary-determination">
+        <!-- Liability determination will be injected here -->
+      </div>
+      <div id="summary-buttons">
+          <button id="export-summary-btn" aria-label="Export summary as JSON">Export (JSON)</button>
+          <button id="close-summary-btn" aria-label="Close summary">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // JAVASCRIPT IS IDENTICAL TO THE PREVIOUS VERSION
+  const appContainer = document.getElementById('app-container');
+  const chatMessages = document.getElementById('chat-messages');
+  const inputAreaForm = document.getElementById('input-area');
+  const userInput = document.getElementById('user-input');
+  const micBtn = document.getElementById('mic-btn');
+  const sendBtn = document.getElementById('send-btn');
+  const prevBtn = document.getElementById('prev-btn');
+  const skipBtn = document.getElementById('skip-btn'); 
+  const reportForm = document.getElementById('report-form');
+  const submitReportBtn = document.getElementById('submit-report-btn');
+  const progressIndicator = document.getElementById('progress-indicator');
+  const clearRestartBtn = document.getElementById('clear-restart-btn'); 
+
+  const summaryModal = document.getElementById('summary-modal');
+  const summaryList = document.getElementById('summary-list');
+  const summaryDeterminationEl = document.getElementById('summary-determination'); 
+  const exportSummaryBtn = document.getElementById('export-summary-btn'); 
+  const closeSummaryBtn = document.getElementById('close-summary-btn');
+
+  const SKIPPED_ANSWER_TEXT = "(Skipped)"; 
+
+  const allQuestions = [
+    "When did the accident happen?", "Where did the accident occur?", "What type of road was it? For example, highway or residential street?",
+    "Was it during day or night?", "What was the weather like at the time?", "What were the road conditions?",
+    "How many vehicles were involved?", "Were there any pedestrians or cyclists involved?", "Was there any construction in the area?",
+    "Was traffic heavy or light at the time?", "What were you driving? Make, model, year.", "What type of vehicle is it?",
+    "Was your vehicle damaged? If yes, where?", "Who was the other driver and what vehicle were they driving?", "What type of vehicle was the other party driving?",
+    "Was either driver using a phone or distracted?", "Was your seatbelt fastened?", "Was the other driver wearing a seatbelt?",
+    "Did either vehicle have mechanical issues?", "Was anyone under the influence of drugs or alcohol?", "What direction were you traveling?",
+    "What direction was the other vehicle traveling?", "What was your speed at the time?", "What was the other vehicle’s speed?",
+    "Were you following the speed limit?", "Were you changing lanes or turning?", "Was the other vehicle changing lanes or turning?",
+    "Did either vehicle run a red light or stop sign?", "Did you yield when required?", "Was anyone reversing or parked?",
+    "Where did your vehicle get hit?", "Where did the other vehicle get hit?", "What part of the road were you in? For example, left lane or right lane?",
+    "Did airbags deploy in your vehicle?", "Did airbags deploy in the other vehicle?", "Was there any vehicle rollover?",
+    "Was there secondary impact, for example hitting a tree or pole?", "Was a tow truck needed?", "Was the accident reported to insurance?",
+    "Was the accident reported to the police?", "Were there any witnesses?", "Do you have the witness contact information?",
+    "Did you take photos of the scene?", "Do you have dashcam or CCTV footage?", "Did the police assign fault at the scene?",
+    "Do you have a copy of the police report?", "Have you spoken to the other driver after the accident?", "Were there any injuries? If so, to whom?",
+    "Do you want to provide any additional information?", "Would you like a summary of the findings once complete?"
+  ];
+
+  let currentQuestionIndex = 0;
+  let answers = new Array(allQuestions.length).fill(null);
+  let collisionOccurred = false; 
+  let welcomeSpeechDone = false;
+
+  const LOCAL_STORAGE_KEY = 'mvldtProgress';
+
+  function saveProgressToLocalStorage() {
+    try {
+      const progress = { currentQuestionIndex, answers, collisionOccurred };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(progress));
+      console.log("DEBUG: Progress saved.");
+    } catch (e) { console.error("Error saving progress:", e); }
+  }
+
+  function loadProgressFromLocalStorage() {
+    try {
+      const savedProgress = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedProgress) {
+        const progress = JSON.parse(savedProgress);
+        currentQuestionIndex = progress.currentQuestionIndex || 0;
+        answers = progress.answers || new Array(allQuestions.length).fill(null);
+        collisionOccurred = progress.collisionOccurred || false;
+        if (answers.length !== allQuestions.length) { // Integrity check
+            answers = new Array(allQuestions.length).fill(null); currentQuestionIndex = 0; collisionOccurred = false;
+        }
+        answers.forEach((ans, idx) => { if (ans !== null) updateFormField(idx, ans); });
+        console.log("DEBUG: Progress loaded.");
+        return true;
+      }
+    } catch (e) { console.error("Error loading progress:", e); localStorage.removeItem(LOCAL_STORAGE_KEY); }
+    return false;
+  }
+  
+  function clearSavedProgressAndRestart() {
+    if (confirm("Are you sure you want to clear saved data and restart?")) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        currentQuestionIndex = 0; answers = new Array(allQuestions.length).fill(null); collisionOccurred = false;
+        chatMessages.innerHTML = ''; createFormFields(); // Re-create form fields to clear them visually
+        welcomeSpeechDone = false; 
+        startWelcomeSequence(); // Restart the welcome sequence properly
+    }
+  }
+  clearRestartBtn.addEventListener('click', clearSavedProgressAndRestart);
+
+  function createFormFields() {
+    reportForm.innerHTML = ''; // Clear existing fields
+    allQuestions.forEach((question, idx) => {
+      const group = document.createElement('div'); group.className = 'form-group'; group.id = 'form-group-' + idx;
+      const label = document.createElement('label'); label.className = 'form-label'; label.setAttribute('for', 'answer-' + idx); label.textContent = question;
+      const input = document.createElement('input'); input.className = 'form-input'; input.type = 'text'; input.id = 'answer-' + idx; input.name = 'answer-' + idx; input.readOnly = true; input.placeholder = 'Answer will appear here...';
+      group.appendChild(label); group.appendChild(input); reportForm.appendChild(group);
+    });
+  }
+  createFormFields(); // Initial creation
+
+  function highlightCurrentFormField(index) {
+    reportForm.querySelectorAll('.form-group').forEach(fg => fg.classList.remove('active'));
+    const currentGroup = document.getElementById('form-group-' + index);
+    if (currentGroup) { currentGroup.classList.add('active'); currentGroup.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  }
+  
+  function updateProgressIndicator() {
+    if (currentQuestionIndex < allQuestions.length) { progressIndicator.textContent = `Question ${currentQuestionIndex + 1} of ${allQuestions.length}`; }
+    else { progressIndicator.textContent = "All questions answered."; }
+    prevBtn.style.display = currentQuestionIndex > 0 ? 'inline-block' : 'none'; prevBtn.disabled = currentQuestionIndex <= 0;
+    skipBtn.style.display = currentQuestionIndex < allQuestions.length -1 ? 'inline-block' : 'none'; skipBtn.disabled = currentQuestionIndex >= allQuestions.length -1;
+  }
+
+  function speakText(text) {  
+    if (!('speechSynthesis' in window)) { console.warn("Speech Synthesis not supported."); return; }
+    window.speechSynthesis.cancel(); // Cancel any ongoing speech
+    const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'en-US'; utterance.rate = 1;
+    // Debugging speech events
+    utterance.onstart = () => console.log(`DEBUG: Speech STARTED: "${text.substring(0, 20)}..."`);
+    utterance.onend = () => console.log(`DEBUG: Speech ENDED: "${text.substring(0, 20)}..."`);
+    utterance.onerror = (e) => console.error(`DEBUG: Speech ERROR: "${text.substring(0, 20)}..."`, e.error);
+    setTimeout(() => window.speechSynthesis.speak(utterance), 50); // Small delay to ensure cancel takes effect
+  }
+
+  function scrollToBottom(element) { element.scrollTop = element.scrollHeight; }
+
+  function appendMessage(text, sender) {  
+    const msgEl = document.createElement('div'); msgEl.classList.add('message'); msgEl.classList.add(sender === 'user' ? 'user-message' : 'bot-message'); msgEl.textContent = text;
+    chatMessages.appendChild(msgEl); scrollToBottom(chatMessages);
+  }
+
+  function updateFormField(index, answer) {   
+    const input = document.getElementById('answer-' + index); if (input) { input.value = answer; input.classList.add('answered'); input.classList.remove('skipped'); }
+  }
+  function markFormFieldAsSkipped(index) {  
+    const input = document.getElementById('answer-' + index); if (input) { input.value = SKIPPED_ANSWER_TEXT; input.classList.add('skipped'); input.classList.remove('answered'); }
+  }
+
+  function applyBranchingLogic() {  
+    if (currentQuestionIndex === 13 && answers[12] !== null) { // After "Was your vehicle damaged?"
+        const damageAnswer = String(answers[12]).toLowerCase(); 
+        if (damageAnswer.includes('yes') || damageAnswer.includes('front bumper was smashed')) { // Basic check for affirmative
+            collisionOccurred = true;
+        } else { // Assume 'no' or unclear implies no collision for this logic path
+            collisionOccurred = false;
+            // Skip collision-specific questions (e.g., 13 to 44)
+            if (currentQuestionIndex < 45) { // Make sure we are before the non-collision questions
+              for (let i = 13; i < 45; i++) { // Mark range as skipped
+                  if (answers[i] === null) markFormFieldAsSkipped(i); // Only if not already answered
+              }
+            }
+            currentQuestionIndex = 45; // Jump to non-collision specific questions
+            return true; // Indicates a jump occurred
+        }
+    } return false; // No jump occurred
+  }
+
+  function askNextQuestion(isNavigatingBack = false) {  
+    if (!isNavigatingBack) { applyBranchingLogic(); }
+    highlightCurrentFormField(currentQuestionIndex); updateProgressIndicator();
+    if (currentQuestionIndex < allQuestions.length) {
+      const question = allQuestions[currentQuestionIndex]; appendMessage(question, 'bot'); speakText(question);
+      userInput.value = (answers[currentQuestionIndex] !== null && answers[currentQuestionIndex] !== SKIPPED_ANSWER_TEXT) ? answers[currentQuestionIndex] : ''; // Pre-fill if answered
+      userInput.disabled = false; sendBtn.disabled = userInput.value.trim() === ''; micBtn.disabled = false; micBtn.setAttribute('aria-disabled', 'false');
+      submitReportBtn.style.display = 'none'; // Hide submit until all questions are done
+    } else {
+      progressIndicator.textContent = "All questions answered. Ready to submit.";
+      appendMessage("All questions answered. You can review your answers or submit the report.", 'bot');
+      speakText("All questions answered. You can review your answers or submit the report.");
+      userInput.disabled = true; sendBtn.disabled = true; micBtn.disabled = true; micBtn.setAttribute('aria-disabled', 'true');
+      prevBtn.disabled = false; prevBtn.style.display = 'inline-block'; // Still allow prev
+      skipBtn.style.display = 'none'; submitReportBtn.style.display = 'block'; // Show submit
+      window.speechSynthesis.cancel(); // Stop any ongoing speech
+    } saveProgressToLocalStorage();
+  }
+  
+  function handlePreviousQuestion() { 
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        // If we go back into a skipped block (due to collisionOccurred=false)
+        if (!collisionOccurred && currentQuestionIndex >= 13 && currentQuestionIndex < 45) {
+            currentQuestionIndex = 12; // Go back to the question that triggered the skip
+        }
+        askNextQuestion(true); // true indicates navigation, not fresh ask
+    }
+  }
+  prevBtn.addEventListener('click', handlePreviousQuestion);
+
+  function handleSkipQuestion() { 
+    if (currentQuestionIndex < allQuestions.length -1) { // Can't skip the last question
+        appendMessage(SKIPPED_ANSWER_TEXT, 'user'); // Show skipped in chat
+        answers[currentQuestionIndex] = SKIPPED_ANSWER_TEXT;
+        markFormFieldAsSkipped(currentQuestionIndex);
+        currentQuestionIndex++;
+        setTimeout(() => askNextQuestion(false), 200); // Brief delay before next question
+    }
+  }
+  skipBtn.addEventListener('click', handleSkipQuestion);
+
+  function determineLiability() { 
+    let determination = "Liability is undetermined based on the provided information.";
+    const reasons = [];
+    let userPoints = 0; let otherPoints = 0;
+
+    // Q28: "Did either vehicle run a red light or stop sign?" (Index 27)
+    const redLightAnswer = answers[27] ? String(answers[27]).toLowerCase() : "";
+    if (redLightAnswer.includes("other") && (redLightAnswer.includes("red") || redLightAnswer.includes("stop"))) {
+      reasons.push("The other vehicle reportedly ran a red light or stop sign."); otherPoints += 3;
+    } else if ((redLightAnswer.includes("i ") || redLightAnswer.includes("my") || redLightAnswer.includes("me")) && (redLightAnswer.includes("red") || redLightAnswer.includes("stop"))) {
+      reasons.push("Your vehicle reportedly ran a red light or stop sign."); userPoints += 3;
+    }
+    
+    // Q30: "Was anyone reversing or parked?" (Index 29) - and who was hit
+    // Q31: "Where did your vehicle get hit?" (Index 30)
+    // Q32: "Where did the other vehicle get hit?" (Index 31)
+    const reversingParkedAnswer = answers[29] ? String(answers[29]).toLowerCase() : "";
+    if (reversingParkedAnswer.includes("parked")) {
+      // Check if it was "I was parked" and "other vehicle hit me"
+      if ( (reversingParkedAnswer.includes("i ") || reversingParkedAnswer.includes("my")) && 
+           answers[30] && String(answers[30]).toLowerCase() !== "no" && String(answers[30]).toLowerCase() !== SKIPPED_ANSWER_TEXT.toLowerCase() ) { // Your vehicle hit
+        reasons.push("Your vehicle was parked and then struck."); otherPoints += 2;
+      }
+    }
+    // Very basic: if one party has points and the other doesn't, or significantly more
+    if (otherPoints > userPoints && otherPoints > 0) { determination = "The other party may be primarily at fault."; }
+    else if (userPoints > otherPoints && userPoints > 0) { determination = "Your actions may have primarily contributed to the accident."; }
+    else if (userPoints > 0 && userPoints === otherPoints) { determination = "Shared responsibility or unclear fault based on these factors."; }
+    
+    let html = `<h3>Preliminary Liability Assessment</h3><p><strong>Determination:</strong> ${determination}</p>`;
+    if (reasons.length > 0) { html += `<p><strong>Key Factors Considered:</strong></p><ul>`; reasons.forEach(reason => { html += `<li>${reason}</li>`; }); html += `</ul>`; }
+    else { html += `<p>No specific fault indicators identified by the current basic rules.</p>`; }
+    html += `<p><small><em>Disclaimer: This is a very basic automated assessment and not a legal determination of fault.</em></small></p>`;
+    return html;
+  }
+
+  async function showSummary() { 
+    submitReportBtn.textContent = "Generating..."; submitReportBtn.disabled = true;
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate generation time
+
+    summaryList.innerHTML = ''; // Clear previous summary
+    allQuestions.forEach((question, index) => {
+      const dt = document.createElement('dt'); dt.textContent = `Q${index + 1}: ${question}`;
+      const dd = document.createElement('dd'); 
+      dd.textContent = (answers[index] === null || answers[index] === '') ? '(Not answered)' : answers[index];
+      if (answers[index] === SKIPPED_ANSWER_TEXT) dd.style.fontStyle = 'italic';
+      summaryList.appendChild(dt); summaryList.appendChild(dd);
+    });
+    summaryDeterminationEl.innerHTML = determineLiability();
+
+    summaryModal.classList.add('active');
+    appContainer.setAttribute('aria-hidden', 'true'); // For accessibility
+    setTimeout(() => { summaryModal.focus(); /* Set focus to the modal itself or first focusable element */ }, 50); // Delay for transition
+    
+    submitReportBtn.textContent = "Submit Report"; // Reset button text
+    // submitReportBtn.disabled = false; // Keep disabled or enable as per flow
+  }
+  submitReportBtn.addEventListener('click', showSummary);
+
+  function exportReportAsJSON() { 
+    const reportData = {
+        reportTitle: "Motor Vehicle Liability Report",
+        reportGeneratedDate: new Date().toISOString(),
+        questionsAndAnswers: allQuestions.map((q, i) => ({
+            questionNumber: i + 1,
+            questionText: q,
+            answer: answers[i] === null ? "(Not Answered)" : answers[i]
+        })),
+        collisionOccurred: collisionOccurred,
+        preliminaryLiability: summaryDeterminationEl.innerText // Or a more structured object
+    };
+    const jsonString = JSON.stringify(reportData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `liability_report_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+  exportSummaryBtn.addEventListener('click', exportReportAsJSON);
+
+  function closeModal() {  
+    summaryModal.classList.remove('active');
+    appContainer.setAttribute('aria-hidden', 'false');
+    document.body.focus(); // Or focus back to a relevant element in the main app
+  }
+  closeSummaryBtn.addEventListener('click', closeModal);
+  summaryModal.addEventListener('click', (event) => { if (event.target === summaryModal) closeModal(); }); // Close on backdrop click
+
+  function handleUserAnswer(answerText) {  
+    let answer = answerText.trim();
+    // Date validation for the first question (index 0)
+    if (currentQuestionIndex === 0 && answer !== SKIPPED_ANSWER_TEXT) {
+        const dateEntered = new Date(answer);
+        if (isNaN(dateEntered.getTime())) { // Invalid date
+            appendMessage("Please enter a valid date (e.g., YYYY-MM-DD or MM/DD/YYYY).", "bot");
+            speakText("Please enter a valid date.");
+            userInput.value = answer; // Keep the invalid input for correction
+            return;
+        }
+        // Optionally reformat to a standard format, e.g., YYYY-MM-DD
+        // answer = dateEntered.toISOString().split('T')[0]; 
+    }
+
+    if (!answer && currentQuestionIndex < allQuestions.length -1 && answer !== SKIPPED_ANSWER_TEXT) { // Allow empty for last question.
+        appendMessage("Please provide an answer, or use Skip/Previous.", "bot");
+        speakText("Please provide an answer, or use Skip or Previous.");
+        return;
+    }
+    appendMessage(answer, 'user');
+
+    // Handle the last question: "Would you like a summary?"
+    if (currentQuestionIndex === allQuestions.length - 1) {
+        answers[currentQuestionIndex] = answer;
+        updateFormField(currentQuestionIndex, answer);
+        const lowerAnswer = answer.toLowerCase();
+        if (lowerAnswer.includes('yes') || lowerAnswer.includes('sure') || lowerAnswer === 'y') {
+            appendMessage("Great! Generating your summary now.", 'bot');
+            speakText("Great! Generating your summary now.");
+            setTimeout(showSummary, 1000); // Delay to allow message to be read
+        } else {
+            appendMessage("Okay. You can click 'Submit Report' to see the summary later or review your answers.", 'bot');
+            speakText("Okay. You can click 'Submit Report' to see the summary later or review your answers.");
+            submitReportBtn.style.display = 'block'; // Ensure submit button is visible
+            prevBtn.disabled = false; // Ensure prev button is active
+        }
+        updateProgressIndicator(); // Update progress to show all questions answered
+        highlightCurrentFormField(currentQuestionIndex); // Highlight the last answered field
+        saveProgressToLocalStorage(); // Save final answer
+        return; // Stop further processing
+    }
+
+    answers[currentQuestionIndex] = answer; updateFormField(currentQuestionIndex, answer); currentQuestionIndex++;
+    setTimeout(() => askNextQuestion(false), 700); // Delay for user to read their own message & bot to prep
+  }
+
+  inputAreaForm.addEventListener('submit', (e) => {  
+    e.preventDefault(); const text = userInput.value;
+    if (text.trim() !== '' || currentQuestionIndex === allQuestions.length -1) { // Allow empty submission for the last question only
+      handleUserAnswer(text); userInput.value = ''; sendBtn.disabled = true;
+    }
+  });
+  userInput.addEventListener('input', () => { 
+    // Enable send button if there's text OR if it's the last question (allows empty "no" to summary)
+    sendBtn.disabled = !(userInput.value.trim() !== '' || currentQuestionIndex === allQuestions.length -1); 
+  });
+
+  window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  if (window.SpeechRecognition === null) {
+    micBtn.style.display = 'none'; // Hide mic button if not supported
+    appendMessage("Voice input is not supported by your browser. Please use text input.", "bot");
+  } else { 
+    const recognition = new window.SpeechRecognition();
+    recognition.lang = 'en-US'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+    let isRecognizing = false;
+
+    function toggleMic() {
+      if (currentQuestionIndex >= allQuestions.length && !(currentQuestionIndex === allQuestions.length -1 && answers[currentQuestionIndex] === null )) { // Mic disabled after all Qs unless it's the last q and unanswered
+          return;
+      }
+      if (isRecognizing) { recognition.stop(); /* onend will handle UI changes */ }
+      else {
+        userInput.disabled = true; sendBtn.disabled = true; // Disable text input during STT
+        micBtn.setAttribute('aria-pressed', 'true'); micBtn.title = 'Stop voice input';
+        try {
+          console.log("DEBUG: Mic toggled. Cancelling any existing speech synthesis.");
+          window.speechSynthesis.cancel(); // Stop bot from speaking when user starts
+          recognition.start();
+          isRecognizing = true;
+        } catch (e) { // Handle cases like "not-allowed" if permission was denied previously
+          console.error("Speech recognition start error:", e);
+          userInput.disabled = false; if (userInput.value.trim() !== '' && currentQuestionIndex < allQuestions.length) sendBtn.disabled = false;
+          micBtn.setAttribute('aria-pressed', 'false'); micBtn.title = 'Start voice input';
+          isRecognizing = false;
+          appendMessage("Could not start voice input. Make sure microphone permission is granted.", "bot");
+          speakText("Could not start voice input. Make sure microphone permission is granted.");
+        }
+      }
+    }
+
+    recognition.addEventListener('start', () => console.log('DEBUG: Speech recognition STARTED.'));
+    recognition.addEventListener('end', () => {
+      console.log('DEBUG: Speech recognition ENDED.'); isRecognizing = false;
+      micBtn.setAttribute('aria-pressed', 'false'); micBtn.title = 'Start voice input';
+      // Re-enable text input if not at the end of questions
+      if (currentQuestionIndex < allQuestions.length) { userInput.disabled = false; if (userInput.value.trim() !== '') sendBtn.disabled = false; }
+    });
+    recognition.addEventListener('result', (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript && transcript.trim() !== '') { handleUserAnswer(transcript); }
+      else { appendMessage("Sorry, I didn't catch that. Please try again.", "bot"); speakText("Sorry, I didn't catch that. Please try again."); }
+    });
+    recognition.addEventListener('error', (event) => {
+      console.error("Speech recognition error:", event.error); isRecognizing = false; // Reset state
+      micBtn.setAttribute('aria-pressed', 'false'); micBtn.title = 'Start voice input';
+      if (currentQuestionIndex < allQuestions.length) { userInput.disabled = false; if (userInput.value.trim() !== '') sendBtn.disabled = false;} // Re-enable
+      let errorMessage = "Sorry, voice input encountered an error: " + event.error;
+      if (event.error === 'no-speech') errorMessage = "I didn't hear anything. Please try again.";
+      else if (event.error === 'audio-capture') errorMessage = "No microphone found. Ensure a microphone is connected and enabled.";
+      else if (event.error === 'not-allowed') errorMessage = "Microphone access was denied. Please enable it in your browser settings.";
+      appendMessage(errorMessage, "bot"); speakText(errorMessage);
+    });
+    micBtn.addEventListener('click', toggleMic);
+  }
+
+  function startWelcomeSequence(isRestart = false) { 
+    if (!isRestart) { const welcomeMsg = "Hi! I'm the Motor Vehicle Liability Determination Tool. I will ask you questions about the incident."; appendMessage(welcomeMsg, 'bot'); }
+    
+    let firstQuestionScheduled = false;
+    function scheduleFirstQuestion() {
+        if (firstQuestionScheduled) return; // Prevent multiple schedules
+        firstQuestionScheduled = true;
+        console.log("DEBUG: Scheduling first question call.");
+        setTimeout(() => askNextQuestion(false), isRestart ? 500 : 1500); // Shorter delay for restart
+    }
+
+    if ('speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function') {
+      const textToSpeak = isRestart ? (allQuestions[currentQuestionIndex] || "Ready to continue.") : "Hi! I'm the Motor Vehicle Liability Determination Tool. I will ask you questions about the incident.";
+      if (isRestart && currentQuestionIndex >= allQuestions.length) { // If restarting and all questions already done
+          askNextQuestion(false); // Go to summary/submit state
+          return;
+      }
+      console.log(`DEBUG: Initializing speech: ${textToSpeak.substring(0,20)}...`);
+      const initialUtterance = new SpeechSynthesisUtterance(textToSpeak);
+      initialUtterance.lang = 'en-US'; initialUtterance.rate = 1;
+      initialUtterance.onstart = () => console.log("DEBUG: Initial/Welcome speech STARTED.");
+      initialUtterance.onend = () => {
+        console.log("DEBUG: Initial/Welcome speech ENDED."); welcomeSpeechDone = true;
+        if (!isRestart || currentQuestionIndex < allQuestions.length) { scheduleFirstQuestion(); }
+      };
+      initialUtterance.onerror = (event) => {
+        console.error("DEBUG: Initial/Welcome speech ERROR:", event.error); welcomeSpeechDone = true;
+        if (!isRestart || currentQuestionIndex < allQuestions.length) { scheduleFirstQuestion(); } // Proceed even if speech fails
+      };
+      window.speechSynthesis.speak(initialUtterance);
+      // Fallback timeout if onend doesn't fire (e.g., browser issues)
+      setTimeout(() => {
+          if (!welcomeSpeechDone) {
+              console.log("DEBUG: Initial/Welcome speech fallback timeout triggered. Cancelling synth and proceeding.");
+              window.speechSynthesis.cancel(); welcomeSpeechDone = true;
+              if (!isRestart || currentQuestionIndex < allQuestions.length) { scheduleFirstQuestion(); }
+          }
+      }, isRestart ? 3000: 8000); // Shorter timeout for restart
+    } else {
+      console.warn("Speech synthesis not supported by the browser."); welcomeSpeechDone = true;
+      if (!isRestart || currentQuestionIndex < allQuestions.length) { scheduleFirstQuestion(); } // Proceed without speech
+    }
+  }
+
+  window.addEventListener('load', () => { 
+    const progressLoaded = loadProgressFromLocalStorage();
+    if (progressLoaded) {
+        appendMessage("Welcome back! Your previous progress has been loaded.", "bot");
+        // If all questions were answered, go to the end state, otherwise start from current question
+        if (currentQuestionIndex < allQuestions.length) { startWelcomeSequence(true); } // Pass true for restart context
+        else { askNextQuestion(false); } // Go to submit/summary state
+    } else { startWelcomeSequence(false); } // Normal first-time welcome
+    updateProgressIndicator(); highlightCurrentFormField(currentQuestionIndex);
+  });
+
+  // Keyboard accessibility for modal
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && summaryModal.classList.contains('active')) closeModal(); });
+  summaryModal.addEventListener('keydown', (e) => { // Focus trap
+    const focusableElements = summaryModal.querySelectorAll('button,[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+    if (!focusableElements.length) return;
+    const firstElement = focusableElements[0]; const lastElement = focusableElements[focusableElements.length - 1];
+    if (e.key === 'Tab') {
+      if (e.shiftKey) { /* shift + tab */ if (document.activeElement === firstElement) { lastElement.focus(); e.preventDefault(); } }
+      else { /* tab */ if (document.activeElement === lastElement) { firstElement.focus(); e.preventDefault(); } }
+    }
+  });
+</script>
+</body>
+</html>
